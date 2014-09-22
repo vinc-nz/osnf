@@ -18,7 +18,6 @@ node = Node()
 if __name__ == '__main__':
     try:
         node.start()
-        ws.init_ws()
         server.start()
     except KeyboardInterrupt:
         server.stop()

@@ -41,6 +41,20 @@ def get_nodes():
     return json.dumps(nodes)
 
 
+@app.route('/v2/<node>')
+def get_stations(node):
+    return to_json(stations)
+
+@app.route('/v2/<node>/<st>')
+def get_values(node, st):
+    st_instance = stations[st]['instance']
+    return json.dumps(st_instance.get_values())
+    
+@app.route('/v2/<node>/<st>/<key>')
+def get_value(node, st, key):
+    st_instance = stations[st]['instance']
+    return json.dumps({key : st_instance.get_value(key)})
+
 def to_json(api_elem):
     whitelist = ['name', 'description']
     d = {}
@@ -50,29 +64,5 @@ def to_json(api_elem):
     return json.dumps(d)
 
 
-def init_ws():
-    root = '/v2/'
-    local_node = core.get_local_node()
-    print 'local node is %s' % local_node
-    def view_func() : return to_json(stations)
-    app.add_url_rule(root + local_node, local_node, view_func)
-    for st in stations:
-        map_station(st, root + local_node + '/' + st)
-        
-def map_station(st, st_root):
-    st_desc = stations[st]
-    if st_desc['show']:
-        st_instance = st_desc['instance']
-        print 'binding %s with %s' % (st_root, str(st_instance))
-        def view_func(): return json.dumps(st_instance.get_values())
-        app.add_url_rule(st_root, st, view_func)
-        map_sensor(st_instance, st_root + '/', 'temperature')
-        map_sensor(st_instance, st_root + '/', 'humidity')
-        map_sensor(st_instance, st_root + '/', 'brightness')
-        map_sensor(st_instance, st_root + '/', 'position')
-        
-def map_sensor(sensor, root, key):
-    endpoint = root + key
-    def view_func(): return json.dumps({key : sensor.get_value(key)})
-    app.add_url_rule(endpoint, endpoint, view_func)
+
 
