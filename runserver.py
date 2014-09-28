@@ -13,9 +13,10 @@ from cherrypy import wsgiserver
  
 d = wsgiserver.WSGIPathInfoDispatcher({'/': ws.app})
 server = wsgiserver.CherryPyWSGIServer((HOST, PORT), d)
-node = Node()
+
 
 if __name__ == '__main__':
+    node = Node()
     try:
         node.start()
         server.start()

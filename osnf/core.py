@@ -6,20 +6,16 @@ Created on 13/set/2014
 
 import threading, time
 
-from conf.node import stations, nodes, rules
+from conf.node import stations, rules
 
 
-def get_local_node():
-    for node in nodes:
-        if nodes[node]['address'] == '127.0.0.1':
-            return node
-        
 
 
 class Node(threading.Thread):
     
     def __init__(self):
         threading.Thread.__init__(self)
+        print 'DEBUG: istanzio nodo'
         self.init_stations()
         self.active = True
         self.lock = threading.Lock()
@@ -48,7 +44,7 @@ class Node(threading.Thread):
             time.sleep(1)
         
     def _run_rule(self, rule):
-        if int(time.time()) % rule['run_interval'] == 0:
+        if rule['enabled'] and int(time.time()) % rule['run_interval'] == 0:
             rule_func = rule['function']
             rule_func()
             

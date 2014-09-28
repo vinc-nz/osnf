@@ -7,10 +7,10 @@ Created on 13/set/2014
 import json
 
 from flask import Flask
+from flask.globals import request
 from flask_cors import CORS
 
-from conf.node import nodes, stations
-import core
+from conf.node import stations
 
 
 app = Flask(__name__)
@@ -36,9 +36,9 @@ def brightness():
 def position():
     return json.dumps({'position' : {'latitude' : 39.343495, 'longitude' : 16.194757}})
 
-@app.route('/v2')
-def get_nodes():
-    return json.dumps(nodes)
+#@app.route('/v2')
+#def get_nodes():
+#    return json.dumps(nodes)
 
 
 @app.route('/v2/<node>')
@@ -54,6 +54,18 @@ def get_values(node, st):
 def get_value(node, st, key):
     st_instance = stations[st]['instance']
     return json.dumps({key : st_instance.get_value(key)})
+
+@app.route('/v2/<node>/<st>/<key>', methods=['POST'])
+def change_state(node, st, key):
+    rpc = request.get_json()
+    st_instance = stations[st]['instance']
+    if key == 'switch':
+        if rpc['switch'] == 'on':
+            st_instance.turn_on()
+        elif rpc['switch'] == 'off':
+            st_instance.turn_off()
+    return ('', 204)
+
 
 def to_json(api_elem):
     whitelist = ['name', 'description']

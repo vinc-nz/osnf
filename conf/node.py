@@ -4,41 +4,48 @@ Created on 13/set/2014
 @author: Vincenzo Pirrone <pirrone.v@gmail.com>
 '''
 
+import json
+
+import requests
+
 from osnf.stations import Sensor, Switch
 
 
-nodes = { 
-    'nodo1' : {
-        'address' : '127.0.0.1',
-        'port' : 80,
-        'code' : 'nodo1',
-        'name' : 'Test',
-        'description' : 'Bla bla'
-    }
-}
+local_name = 'nodo1'
+
+
+remote_nodes = {}
 
 stations = {
                
     'OSA1' : {
         'port' : '/dev/ttyACM0',
         'class' : Sensor,
-        'name' : 'Stazione 1',
         'description' : 'Rileva temperatura, umidita, luminosita',
-        'show' : True
     },
-               
+            
     'OSA2' : {
         'port' : '/dev/ttyACM1',
         'class' : Switch,
-        'name' : 'Stazione 2',
         'description' : 'Interruttore con LED',
-        'show' : False
     }
+  
+               
 }
 
 
     
-def my_rule():
+def remote_switch():
+    light = stations['OSA1']['instance'].get_value('brightness')
+    node = remote_nodes['nodo2']
+    endpoint = "http://%s:%s/v2/nodo2/OSA2/switch" % (node['address'], node['port'])
+    headers = {'content-type': 'application/json'}
+    if light < 50:
+        requests.post(endpoint, headers=headers, data=json.dumps({'switch': 'on'}))
+    else:
+        requests.post(endpoint, headers=headers, data=json.dumps({'switch': 'off'}))
+        
+def local_switch():
     light = stations['OSA1']['instance'].get_value('brightness')
     switch = stations['OSA2']['instance']
     if light < 50:
@@ -49,15 +56,19 @@ def my_rule():
 rules = {
     'RULE1' : {
         'run_interval' : 1,
-        'function' : my_rule,
+        'function' : local_switch,
         'name' : 'Regola del LED',
-        'description' : 'Accende o spegne il LED in base al valore della luminosita'
+        'description' : 'Accende o spegne il LED in base al valore della luminosita',
+        'enabled' : False
     }
 }
 
 
         
-
+# { "node" : "nodo1", "station" : "OSA1", "timestamp_minute" : current_minute, "type" : "position", "value" : position_content.position };
+# { "node" : "nodo1", "station" : "OSA1", "timestamp_minute" : current_minute, "type" : "humidity", "value" : humidity_content.humidity };
+# { "node" : "nodo1", "station" : "OSA1", "timestamp_minute" : current_minute, "type" : "temperature", "value" : temperature_content.temperature };
+# { "node" : "nodo1", "station" : "OSA1", "timestamp_minute" : current_minute, "type" : "brightness", "value" : brightness_content.brightness };
 
 
 

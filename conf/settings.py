@@ -7,7 +7,7 @@ Created on 13/set/2014
 import serial
 
 HOST='0.0.0.0'
-PORT=80
+PORT=5000
 SERIAL_CLASS=serial.Serial
 
 try:

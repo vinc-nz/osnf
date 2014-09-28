@@ -6,6 +6,7 @@ Created on 13/set/2014
 
 import re
 import threading
+import time
 
 
 class FakeSerial():
@@ -13,7 +14,8 @@ class FakeSerial():
         print 'opening fake serial on %s' % port
     
     def readline(self):
-        return 'TEMP:26,HUM:70,LIGHT:50\n'
+        time.sleep(2)
+        return 'TIME:%d' % int(time.time())
     
     def write(self, line):
         print 'FAKE SERIAL: ' + line
@@ -56,7 +58,8 @@ class Sensor(Station, threading.Thread):
         while self.is_active():
             values = self._read()
             for k in values.keys():
-                self.values[k] = values[k]
+                if not self.values.has_key(k) or self.values[k] != values[k]:
+                    self.values[k] = values[k]
         
     def _read(self):
         #print 'DEBUG: reading from serial'
@@ -75,19 +78,21 @@ class Sensor(Station, threading.Thread):
         return values
     
     def get_values(self):
-        values = self.values
-        temp = float(values['TEMP']) if values.has_key('TEMP') else 0
-        hum = float(values['HUM']) if values.has_key('HUM') else 0
-        light = float(values['LIGHT']) if values.has_key('LIGHT') else 0
-        return {
-                'temperature' : temp,
-                'humidity' : hum,
-                'brightness' : light,
-                'position' : {'latitude' : 39.343495, 'longitude' : 16.194757}
-         }
+        values = {}
+        mapping = {'TEMP' : 'temperature', 'HUM' : 'humidity', 'LIGHT' : 'brightness', 'TIME' : 'time' }
+        types = {'TEMP' : float, 'HUM' : float, 'LIGHT' : float, 'TIME' : int }
+        for k in mapping.keys():
+            if self.values.has_key(k):
+                converter = types[k]
+                values[mapping[k]] = converter(self.values[k])
+        values['position'] = {'latitude' : 39.343495, 'longitude' : 16.194757}
+        return values
         
     def get_value(self, key):
-        return self.get_values()[key]
+        values = self.get_values()
+        if values.has_key(key):
+            return values[key]
+        return None
     
     def exit(self):
         Station.exit(self)
@@ -115,8 +120,5 @@ class Switch(Station):
             self.on = False
   
         
-if __name__ == '__main__':
-    s= Sensor()
-    print s.read_value('HUM')
-    print s.read_all()
+
 

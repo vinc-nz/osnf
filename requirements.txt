@@ -1,9 +1,12 @@
 CherryPy==3.5.0
 Flask==0.10.1
+Flask-Cors==1.8.0
 Jinja2==2.7.3
 MarkupSafe==0.23
 Werkzeug==0.9.6
 argparse==1.2.1
 itsdangerous==0.24
 pyserial==2.7
+requests==2.4.1
+six==1.8.0
 wsgiref==0.1.2
