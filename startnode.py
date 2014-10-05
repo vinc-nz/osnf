@@ -5,21 +5,21 @@ Created on 13/set/2014
 '''
 
 import osnf.ws as ws
-from osnf.core import Node
-from conf.settings import HOST, PORT
+from osnf.core import build_network
+from conf.node import LISTEN_ADDR, PORT
 from cherrypy import wsgiserver
 
 
  
 d = wsgiserver.WSGIPathInfoDispatcher({'/': ws.app})
-server = wsgiserver.CherryPyWSGIServer((HOST, PORT), d)
+server = wsgiserver.CherryPyWSGIServer((LISTEN_ADDR, PORT), d)
 
 
 if __name__ == '__main__':
-    node = Node()
+    network = build_network()
     try:
-        node.start()
+        network.start()
         server.start()
     except KeyboardInterrupt:
         server.stop()
-        node.exit()
+        network.stop()

@@ -4,64 +4,66 @@ Created on 13/set/2014
 @author: Vincenzo Pirrone <pirrone.v@gmail.com>
 '''
 
-import json
 
-import requests
+from osnf.api import ValueMonitor
+from osnf.connectors import Serial, FakeSerial
+from osnf.stations import Switch, Sensor
 
-from osnf.stations import Sensor, Switch
 
-
-local_name = 'nodo1'
+NAME = 'nodo1'
+DESCRIPTION = ''
+LISTEN_ADDR = '0.0.0.0'
+PORT = 5000
 
 
 remote_nodes = {}
 
+
+class LightMonitor(ValueMonitor):
+    
+    def __init__(self, enabled=True):
+        ValueMonitor.__init__(self, key='brightness', enabled=enabled)
+        
+    def on_value_change(self, network, oldvalue, newvalue):
+        light = newvalue
+        switch = network.get_local_node().get_station('OSA2')
+        if light < 50:
+            switch.turn_on()
+        else:
+            switch.turn_off()
+
+class Clock(ValueMonitor):
+    
+    def __init__(self, enabled=True):
+        ValueMonitor.__init__(self, key='time', enabled=enabled)
+        
+    def on_value_change(self, network, oldvalue, newvalue):
+        print newvalue
+
 stations = {
                
     'OSA1' : {
-        'port' : '/dev/ttyACM0',
         'class' : Sensor,
+        'connector' : FakeSerial(port='/dev/ttyACM0'),
         'description' : 'Rileva temperatura, umidita, luminosita',
+        'data' : {
+            'position' : {'latitude' : 39.343495, 'longitude' : 16.194757}
+        },
+        'monitors' : [
+            LightMonitor(enabled=False),
+            Clock()
+        ]
     },
             
     'OSA2' : {
-        'port' : '/dev/ttyACM1',
         'class' : Switch,
+        'connector' : FakeSerial(port='/dev/ttyACM1'),
         'description' : 'Interruttore con LED',
     }
   
-               
 }
 
 
-    
-def remote_switch():
-    light = stations['OSA1']['instance'].get_value('brightness')
-    node = remote_nodes['nodo2']
-    endpoint = "http://%s:%s/v2/nodo2/OSA2/switch" % (node['address'], node['port'])
-    headers = {'content-type': 'application/json'}
-    if light < 50:
-        requests.post(endpoint, headers=headers, data=json.dumps({'switch': 'on'}))
-    else:
-        requests.post(endpoint, headers=headers, data=json.dumps({'switch': 'off'}))
-        
-def local_switch():
-    light = stations['OSA1']['instance'].get_value('brightness')
-    switch = stations['OSA2']['instance']
-    if light < 50:
-        switch.turn_on()
-    else:
-        switch.turn_off()
-
-rules = {
-    'RULE1' : {
-        'run_interval' : 1,
-        'function' : local_switch,
-        'name' : 'Regola del LED',
-        'description' : 'Accende o spegne il LED in base al valore della luminosita',
-        'enabled' : False
-    }
-}
 
 
         

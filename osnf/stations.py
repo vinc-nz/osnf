@@ -1,72 +1,56 @@
 '''
-Created on 13/set/2014
+Created on 05/ott/2014
 
 @author: Vincenzo Pirrone <pirrone.v@gmail.com>
 '''
-
 import re
 import threading
-import time
+
+from osnf.api import Station
 
 
-class FakeSerial():
-    def __init__(self, port):
-        print 'opening fake serial on %s' % port
-    
-    def readline(self):
-        time.sleep(2)
-        return 'TIME:%d' % int(time.time())
-    
-    def write(self, line):
-        print 'FAKE SERIAL: ' + line
-    
-    def close(self):
-        print 'closing fake serial'
-    
-class Station:
-    def __init__(self, port):
-        print 'DEBUG: opening serial ' + port
-        try:
-            from conf.settings import SERIAL_CLASS
-        except ImportError:
-            print 'DEBUG: using fake serial'
-            SERIAL_CLASS=FakeSerial
-        self.serial = SERIAL_CLASS(port)   
+class StoppableThread(threading.Thread):
+    """Thread class with a stop() method. The thread itself has to check
+    regularly for the stopped() condition."""
+
+    def __init__(self):
+        super(StoppableThread, self).__init__()
+        self._stop = threading.Event()
+
+    def stop(self):
+        self._stop.set()
         
-    def exit(self):
-        self.serial.close() 
-       
-class Sensor(Station, threading.Thread):
-    def __init__(self, port):
-        Station.__init__(self, port)
-        threading.Thread.__init__(self)
-        print 'instancing Sensor'
+    def is_running(self):
+        return not self._stop.isSet()
+
+
+class Sensor(StoppableThread, Station):
+    
+    def __init__(self, name, description, connector, data={}, monitors=[]):
+        StoppableThread.__init__(self)
+        Station.__init__(self, name, description, connector, data=data, monitors=monitors)
         self.pattern = re.compile('\w+:\d+')
-        self.values = {}
-        self.lock = threading.Lock()
-        self.active = True
-        self.start()
-        
-    def is_active(self):
-        self.lock.acquire()
-        val = self.active
-        self.lock.release()
-        return val
-        
+        self.mapping = {'TEMP' : 'temperature', 'HUM' : 'humidity', 'LIGHT' : 'brightness', 'TIME' : 'time' }
+        self.types = {'TEMP' : float, 'HUM' : float, 'LIGHT' : float, 'TIME' : int }
+    
     def run(self):
-        threading.Thread.run(self)
-        while self.is_active():
+        StoppableThread.run(self)
+        while self.is_running():
             values = self._read()
-            for k in values.keys():
-                if not self.values.has_key(k) or self.values[k] != values[k]:
-                    self.values[k] = values[k]
-        
+            for st_key in values.keys():
+                converter = self.types[st_key]
+                osnf_key = self.mapping[st_key]
+                st_val = converter(values[st_key])
+                if not self.data.has_key(osnf_key) or self.data[osnf_key] != st_val:
+                    self.data[osnf_key] = st_val
+    
+    
     def _read(self):
         #print 'DEBUG: reading from serial'
         values = {}
-        line = self.serial.readline()
+        line = self.connector.readline()
         while not self.pattern.search(line):
-            line = self.serial.readline()
+            line = self.connector.readline()
         l = line.rstrip('\n').split(',')
         for elem in l:
             try:
@@ -77,48 +61,29 @@ class Sensor(Station, threading.Thread):
         #print 'DEBUG: read all:' + values
         return values
     
-    def get_values(self):
-        values = {}
-        mapping = {'TEMP' : 'temperature', 'HUM' : 'humidity', 'LIGHT' : 'brightness', 'TIME' : 'time' }
-        types = {'TEMP' : float, 'HUM' : float, 'LIGHT' : float, 'TIME' : int }
-        for k in mapping.keys():
-            if self.values.has_key(k):
-                converter = types[k]
-                values[mapping[k]] = converter(self.values[k])
-        values['position'] = {'latitude' : 39.343495, 'longitude' : 16.194757}
-        return values
+    
+    def get_all_data(self):
+        return dict(self.data)
         
-    def get_value(self, key):
-        values = self.get_values()
-        if values.has_key(key):
-            return values[key]
+    def get_data(self, key):
+        if self.data.has_key(key):
+            return self.data[key]
         return None
     
-    def exit(self):
-        Station.exit(self)
-        self.lock.acquire()
-        self.active = False
-        self.lock.release()
-    
-   
-        
+
+
 class Switch(Station):
     
-    def __init__(self, port):
-        Station.__init__(self, port)
-        print 'instancing Switch'
+    def __init__(self, name, description, connector, data={}, monitors=[]):
+        Station.__init__(self, name, description, connector, data=data, monitors=monitors)
         self.on = False
-        
+    
     def turn_on(self):
         if not self.on:
-            self.serial.write('a\n')
+            self.connector.writeline('a')
             self.on = True
         
     def turn_off(self):
         if self.on:
-            self.serial.write('s\n')
+            self.connector.writeline('s')
             self.on = False
-  
-        
-
-
