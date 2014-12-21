@@ -7,6 +7,7 @@ import re
 import threading
 
 from osnf.api import Station
+from osnf.api import get_network
 
 
 class StoppableThread(threading.Thread):
@@ -41,8 +42,18 @@ class Sensor(StoppableThread, Station):
                 converter = self.types[st_key]
                 osnf_key = self.mapping[st_key]
                 st_val = converter(values[st_key])
-                if not self.data.has_key(osnf_key) or self.data[osnf_key] != st_val:
-                    self.data[osnf_key] = st_val
+                self._update(osnf_key, st_val)
+                    
+    def _update(self, key, val):
+        oldval = None
+        if self.data.has_key(key):
+            oldval = self.data[key]
+        if oldval is None or oldval != val:
+            self.data[key] = val
+            if self.monitors.has_key(key):
+                monitors = self.monitors[key]
+                for m in monitors:
+                    m.on_value_change(get_network(), oldval, val)
     
     
     def _read(self):

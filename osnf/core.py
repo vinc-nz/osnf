@@ -6,10 +6,8 @@ Created on 13/set/2014
 
 
 from conf.node import stations, NAME, DESCRIPTION
-from osnf.api import Node, Network
+from osnf.api import Node, Network, set_network_object
 
-
-network = None
 
 
    
@@ -57,12 +55,11 @@ class NetworkImpl(Network):
     def stop(self):
         self.local_node.stop()
     
-def get_network():
-    return network
         
 def build_network():
     global network 
     network = NetworkImpl()
+    set_network_object(network)
     return network
 
 

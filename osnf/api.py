@@ -4,6 +4,13 @@ Created on 28/set/2014
 @author: Vincenzo Pirrone <pirrone.v@gmail.com>
 '''
 
+network = None
+
+def get_network():
+    return network
+
+def set_network_object(net_obj):
+    network = net_obj
 
 class Network:
     

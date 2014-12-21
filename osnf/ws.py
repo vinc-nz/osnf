@@ -11,7 +11,7 @@ from flask.globals import request
 from flask_cors import CORS
 
 from conf.node import remote_nodes, NAME, DESCRIPTION, LISTEN_ADDR, stations
-from osnf.core import get_network
+from osnf.api import get_network
 
 
 app = Flask(__name__)
